@@ -1521,7 +1521,7 @@ class Obsdata(object):
         """Adds attribute self.camp or self.logcamp: closure amplitudes table
 
            Args:
-               avg_time (float): closure amplitude averaging timescale
+               avg_time (float): closure amplitude averaging timescale (ignored if scan_avg is 'True')
                scan_avg (bool): if 'True' averages using scans. 'False' by default
                return_type: data frame ('df') or recarray ('rec')
                ctype (str): The closure amplitude type ('camp' or 'logcamp')
@@ -1542,8 +1542,12 @@ class Obsdata(object):
         else:
             tint0 = 0
 
-        if avg_time > tint0:
-            foo = self.avg_incoherent(
+        if avg_time > tint0 or scan_avg:
+            foo = self.copy()
+            if scan_avg:
+                foo.add_scans()
+
+            foo = foo.avg_incoherent(
                 avg_time, debias=debias, err_type=err_type, scan_avg=scan_avg)
         else:
             foo = self
