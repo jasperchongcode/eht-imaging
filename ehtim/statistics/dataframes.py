@@ -688,24 +688,41 @@ def make_bsp_df(obs, band='unknown', polarization='unknown', mode='all', count='
     return df
 
 
-def average_cphases(cdf, dt, return_type='rec', err_type='predicted', num_samples=1000, snrcut=0.):
+def average_cphases(cdf, dt, return_type='rec', err_type='predicted', num_samples=1000, snrcut=0., scan_avg=False, scan_dt=0.0165, scan_margin=0.0001):
     """averages DataFrame of cphases
 
     Args:
         cdf: data frame of closure phases
-        dt: integration time in seconds
+        dt: integration time in seconds (ignored when scan_avg is 'True')
+        scan_avg (bool): if 'True' averages using scans. 'False' by default
+        scan_dt (float): minimal time interval between scans in hours (used when scan_avg is 'True')
+        scan_margin (float): padding scans by that time margin in hours (used when scan_avg is 'True')
         return_type: 'rec' for numpy record array (as used by ehtim), 'df' for data frame
         err_type: 'predicted' for modeled error, 'measured' for bootstrap empirical variability estimator
 
     Returns:
         cdf2: averaged closure phases
     """
-    # todo take in scan_avg as a parameter, and update grouping round_time to be done by scan_avg
 
     cdf2 = cdf.copy()
     t0 = datetime.datetime(1960, 1, 1)
-    cdf2['round_time'] = list(map(lambda x: np.round(
-        (x - t0).total_seconds()/float(dt)), cdf2.datetime))
+
+    if not scan_avg:
+        cdf2['round_time'] = list(map(lambda x: np.round(
+            (x - t0).total_seconds()/float(dt)), cdf2.datetime))
+    else:
+        # set round_time using scans
+        round_time = [-1]*len(cdf2.datetime)
+        scan_id = 0
+
+        for i in range(len(cdf2.datetime)-1):
+            round_time[i] = scan_id
+            # if the upcoming gap is bigger than scan_dt
+            if (cdf2.datetime[i+1] - cdf2.datetime[i]) > scan_dt:
+                scan_id += 1
+
+        round_time[-1] = scan_id
+
     grouping = ['polarization', 'band',
                 'triangle', 't1', 't2', 't3', 'round_time']
     # column just for counting the elements

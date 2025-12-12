@@ -1430,11 +1430,13 @@ class Obsdata(object):
         return
 
     def add_cphase(self, avg_time=0, return_type='rec', count='max', snrcut=0.,
-                   err_type='predicted', num_samples=1000, round_s=0.1, uv_min=False):
+                   err_type='predicted', num_samples=1000, round_s=0.1, uv_min=False,
+                   scan_avg=False):
         """Adds attribute self.cphase: cphase table averaged for dt
 
            Args:
                avg_time (float): closure phase averaging timescale
+               scan_avg (bool): if 'True' averages using scans. 'False' by default
                return_type: data frame ('df') or recarray ('rec')
                count (str): If 'min', return minimal set of phases,
                             if 'max' return all closure phases up to reordering
@@ -1445,8 +1447,6 @@ class Obsdata(object):
 
         """
 
-        # todo add scan_avg as a parameter option
-
         # Get spacing between datapoints in seconds
         if len(set([x[0] for x in list(self.unpack('time'))])) > 1:
             tint0 = np.min(np.diff(np.asarray(sorted(list(set(
@@ -1454,12 +1454,11 @@ class Obsdata(object):
         else:
             tint0 = 0
 
-        if avg_time > tint0:
+        if avg_time > tint0 or scan_avg:
             cdf = ehdf.make_cphase_df(self, mode='all', round_s=round_s, count=count,
                                       snrcut=0., uv_min=uv_min)
-            # todo add scan_avg as a paremeter to averag
             cdf = ehdf.average_cphases(cdf, avg_time, return_type=return_type, err_type=err_type,
-                                       num_samples=num_samples, snrcut=snrcut)
+                                       num_samples=num_samples, snrcut=snrcut, scan_avg=scan_avg)
         else:
             cdf = ehdf.make_cphase_df(self, mode='all', round_s=round_s, count=count,
                                       snrcut=snrcut, uv_min=uv_min)
@@ -1518,11 +1517,12 @@ class Obsdata(object):
 
     def add_camp(self, avg_time=0, return_type='rec', ctype='camp',
                  count='max', debias=True, snrcut=0.,
-                 err_type='predicted', num_samples=1000, round_s=0.1):
+                 err_type='predicted', num_samples=1000, round_s=0.1, scan_avg=False):
         """Adds attribute self.camp or self.logcamp: closure amplitudes table
 
            Args:
                avg_time (float): closure amplitude averaging timescale
+               scan_avg (bool): if 'True' averages using scans. 'False' by default
                return_type: data frame ('df') or recarray ('rec')
                ctype (str): The closure amplitude type ('camp' or 'logcamp')
                debias (bool): If True, debias the closure amplitude
@@ -1533,7 +1533,6 @@ class Obsdata(object):
                round_s (float): accuracy of datetime object in seconds
                snrcut (float): flag closure amplitudes with snr lower than this
         """
-        # todo update this to take in scan_avg
 
         # Get spacing between datapoints in seconds
         if len(set([x[0] for x in list(self.unpack('time'))])) > 1:
@@ -1544,9 +1543,8 @@ class Obsdata(object):
             tint0 = 0
 
         if avg_time > tint0:
-            # todo pass scan_avg to this
             foo = self.avg_incoherent(
-                avg_time, debias=debias, err_type=err_type)
+                avg_time, debias=debias, err_type=err_type, scan_avg=scan_avg)
         else:
             foo = self
         cdf = ehdf.make_camp_df(foo, ctype=ctype, debias=False,
@@ -1570,11 +1568,13 @@ class Obsdata(object):
 
     def add_logcamp(self, avg_time=0, return_type='rec', ctype='camp',
                     count='max', debias=True, snrcut=0.,
-                    err_type='predicted', num_samples=1000, round_s=0.1):
+                    err_type='predicted', num_samples=1000, round_s=0.1,
+                    scan_avg=False):
         """Adds attribute self.logcamp: closure amplitudes table
 
            Args:
                avg_time (float): closure amplitude averaging timescale
+               scan_avg (bool): if 'True' averages using scans. 'False' by default
                return_type: data frame ('df') or recarray ('rec')
                ctype (str): The closure amplitude type ('camp' or 'logcamp')
                debias (bool): If True, debias the closure amplitude
@@ -1586,12 +1586,12 @@ class Obsdata(object):
                snrcut (float): flag closure amplitudes with snr lower than this
 
         """
-        # todo update this to take in scan_avg, and pass it to add_camp
 
         self.add_camp(return_type=return_type, ctype='logcamp',
                       count=count, debias=debias, snrcut=snrcut,
                       avg_time=avg_time, err_type=err_type,
-                      num_samples=num_samples, round_s=round_s)
+                      num_samples=num_samples, round_s=round_s,
+                      scan_avg=scan_avg)
 
         return
 
