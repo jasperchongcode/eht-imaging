@@ -718,10 +718,12 @@ def average_cphases(cdf, dt, return_type='rec', err_type='predicted', num_sample
         for i in range(len(cdf2.datetime)-1):
             round_time[i] = scan_id
             # if the upcoming gap is bigger than scan_dt
-            if (cdf2.datetime[i+1] - cdf2.datetime[i]) > scan_dt:
+            if (cdf2.datetime[i+1] - cdf2.datetime[i]) > pd.to_timedelta(scan_dt, unit="h"):
                 scan_id += 1
 
         round_time[-1] = scan_id
+
+        cdf2['round_time'] = round_time
 
     grouping = ['polarization', 'band',
                 'triangle', 't1', 't2', 't3', 'round_time']

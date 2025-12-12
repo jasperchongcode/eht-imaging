@@ -1467,7 +1467,8 @@ class Obsdata(object):
             print("Updated self.cphase: no averaging")
 
         self.cphase = cdf
-        print("updated self.cphase: avg_time %f s\n" % avg_time)
+        print("updated self.cphase: avg_time %f s, scan_avg %s\n" %
+              (avg_time, scan_avg))
 
         return
 
@@ -1563,10 +1564,12 @@ class Obsdata(object):
 
         if ctype == 'logcamp':
             self.logcamp = cdf
-            print("updated self.logcamp: avg_time %f s\n" % avg_time)
+            print("updated self.logcamp: avg_time %f s, scan_avg %s\n" %
+                  (avg_time, scan_avg))
         elif ctype == 'camp':
             self.camp = cdf
-            print("updated self.camp: avg_time %f s\n" % avg_time)
+            print("updated self.camp: avg_time %f s, scan_avg %s\n" %
+                  (avg_time, scan_avg))
 
         return
 
