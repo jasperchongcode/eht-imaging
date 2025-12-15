@@ -4039,7 +4039,7 @@ def load_txt(fname, polrep='stokes', pol_prim=None, pulse=ehc.PULSE_DEFAULT, zer
 
 
 def load_fits(fname, aipscc=False, pulse=ehc.PULSE_DEFAULT,
-              polrep='stokes', pol_prim=None, zero_pol=False):
+              polrep='stokes', pol_prim=None, zero_pol=False, verbose=True):
     """Read in an image from a FITS file.
 
        Args:
@@ -4049,13 +4049,15 @@ def load_fits(fname, aipscc=False, pulse=ehc.PULSE_DEFAULT,
            polrep (str): polarization representation, either 'stokes' or 'circ'
            pol_prim (str): The default image: I,Q,U or V for Stokes, RR,LL,LR,RL for Circular
            zero_pol (bool): If True, loads any missing polarizations as zeros
+           verbose (bool): If False, removes unneeded print statements
 
        Returns:
            (Image): loaded image object
     """
 
     return ehtim.io.load.load_im_fits(fname, aipscc=aipscc, pulse=pulse,
-                                      polrep=polrep, pol_prim=pol_prim, zero_pol=zero_pol)
+                                      polrep=polrep, pol_prim=pol_prim, zero_pol=zero_pol,
+                                      verbose=verbose)
                                       
 def avg_imlist(imlist):
     """Average a list of images.
