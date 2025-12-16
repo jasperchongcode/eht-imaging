@@ -1522,8 +1522,8 @@ class Obsdata(object):
         """Adds attribute self.camp or self.logcamp: closure amplitudes table
 
            Args:
-               avg_time (float): closure amplitude averaging timescale (ignored if scan_avg is 'True')
-               scan_avg (bool): if 'True' averages using scans. 'False' by default
+               avg_time (float): visibility averaging timescale prior to calculating closure amplitude
+               scan_avg (bool): if 'True' averages closure amplitudes using scans. 'False' by default
                return_type: data frame ('df') or recarray ('rec')
                ctype (str): The closure amplitude type ('camp' or 'logcamp')
                debias (bool): If True, debias the closure amplitude
@@ -1543,17 +1543,23 @@ class Obsdata(object):
         else:
             tint0 = 0
 
-        if avg_time > tint0 or scan_avg:
+        # Average visibilities prior to calculating closure values
+        if avg_time > tint0:
             foo = self.copy()
             if scan_avg:
                 foo.add_scans()
 
             foo = foo.avg_incoherent(
-                avg_time, debias=debias, err_type=err_type, scan_avg=scan_avg)
+                avg_time, debias=debias, err_type=err_type)
         else:
             foo = self
         cdf = ehdf.make_camp_df(foo, ctype=ctype, debias=False,
                                 count=count, round_s=round_s, snrcut=snrcut)
+
+        if scan_avg:  # Actual closure averaging
+            # todo consider whether to calculate mean differently between logcamp and camp
+            cdf = ehdf.average_camp(cdf, avg_time, return_type='df', err_type=err_type,
+                                    num_samples=num_samples, snrcut=snrcut, scan_avg=scan_avg)
 
         if ctype == 'logcamp':
             print("updated self.lcamp: no averaging")

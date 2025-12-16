@@ -688,7 +688,7 @@ def make_bsp_df(obs, band='unknown', polarization='unknown', mode='all', count='
     return df
 
 
-def average_cphases(cdf, dt, return_type='rec', err_type='predicted', num_samples=1000, snrcut=0., scan_avg=False, scan_dt=0.0165, scan_margin=0.0001):
+def average_cphases(cdf, dt, return_type='rec', err_type='predicted', num_samples=1000, snrcut=0., scan_avg=False, scan_dt=0.0165):
     """averages DataFrame of cphases
 
     Args:
@@ -696,7 +696,6 @@ def average_cphases(cdf, dt, return_type='rec', err_type='predicted', num_sample
         dt: integration time in seconds (ignored when scan_avg is 'True')
         scan_avg (bool): if 'True' averages using scans. 'False' by default
         scan_dt (float): minimal time interval between scans in hours (used when scan_avg is 'True')
-        scan_margin (float): padding scans by that time margin in hours (used when scan_avg is 'True')
         return_type: 'rec' for numpy record array (as used by ehtim), 'df' for data frame
         err_type: 'predicted' for modeled error, 'measured' for bootstrap empirical variability estimator
 
@@ -722,6 +721,7 @@ def average_cphases(cdf, dt, return_type='rec', err_type='predicted', num_sample
                 scan_id += 1
 
         round_time[-1] = scan_id
+        # scanList = [np.asarray([np.min(times_uni[scans==cou] - scan_margin)])]
 
         cdf2['round_time'] = round_time
 
@@ -767,6 +767,90 @@ def average_cphases(cdf, dt, return_type='rec', err_type='predicted', num_sample
     # cdf2.drop(cdf2[cdf2.number < 3.].index, inplace=True)
     if return_type == 'rec':
         return df_to_rec(cdf2, 'cphase')
+    elif return_type == 'df':
+        return cdf2
+
+
+def average_camp(cdf, dt, return_type='rec', err_type='predicted', num_samples=1000, snrcut=0., scan_avg=False, scan_dt=0.0165):
+    """averages DataFrame of log closure amplitudes
+
+    Args:
+        ldf: data frame of log closure amplitudes (camp)
+        dt: integration time in seconds (ignored when scan_avg is 'True')
+        scan_avg (bool): if 'True' averages using scans. 'False' by default
+        scan_dt (float): minimal time interval between scans in hours
+        return_type: 'rec' for numpy record array, 'df' for data frame
+        err_type: 'predicted' for modeled error, 'measured' for bootstrap
+
+        NOTE: This calculates a standard mean for logcamp or camp, it does not consider
+        finding the log space mean.
+
+    Returns:
+        cdf2: averaged closure amplitudes (can also be log)
+    """
+
+    cdf2 = cdf.copy()
+    t0 = datetime.datetime(1960, 1, 1)
+
+    # 1. TIME BINNING
+    if not scan_avg:
+        cdf2['round_time'] = list(map(lambda x: np.round(
+            (x - t0).total_seconds()/float(dt)), cdf2.datetime))
+    else:
+        round_time = [-1]*len(cdf2.datetime)
+        scan_id = 0
+        for i in range(len(cdf2.datetime)-1):
+            round_time[i] = scan_id
+            if (cdf2.datetime[i+1] - cdf2.datetime[i]) > pd.to_timedelta(scan_dt, unit="h"):
+                scan_id += 1
+        round_time[-1] = scan_id
+        cdf2['round_time'] = round_time
+
+    # 2. GROUPING
+    grouping = ['polarization', 'band', 'quadrangle',
+                't1', 't2', 't3', 't4', 'round_time']
+
+    cdf2['number'] = 1
+
+    # Aggregation dictionary
+    # Note: u/v coordinates for c-amps are averaged, but u1..u4 might be needed
+    aggregated = {'datetime': np.min, 'time': np.mean,
+                  'number': lambda x: len(x),
+                  'u1': np.mean, 'u2': np.mean, 'u3': np.mean, 'u4': np.mean,
+                  'v1': np.mean, 'v2': np.mean, 'v3': np.mean, 'v4': np.mean}
+
+    # 3. AVERAGING
+    if err_type == 'measured':
+        cdf2['dummy'] = cdf2['camp']  # Changed 'cphase' to 'camp'
+        aggregated['dummy'] = lambda x: bootstrap(
+            x, np.mean, num_samples=num_samples, wrapping_variable=False)
+
+    elif err_type == 'predicted':
+        aggregated['camp'] = np.mean
+        aggregated['sigmaca'] = lambda x: np.sqrt(np.sum(x**2)/len(x)**2)
+    else:
+        print("Error type can only be 'predicted' or 'measured'! Assuming 'predicted'.")
+        aggregated['camp'] = np.mean
+        aggregated['sigmaca'] = lambda x: np.sqrt(np.sum(x**2)/len(x)**2)
+
+    # ACTUAL AVERAGING
+    cdf2 = cdf2.groupby(grouping).agg(aggregated).reset_index()
+
+    if err_type == 'measured':
+        cdf2['camp'] = [x[0] for x in list(cdf2['dummy'])]
+        cdf2['sigmaca'] = [0.5*(x[1][1]-x[1][0]) for x in list(cdf2['dummy'])]
+
+    # 4. SNR CUT
+    if snrcut > 0:  # TODO check this
+        # This assumes sigmaca is in the same units as camp (log-amplitude)
+        cdf2 = cdf2[cdf2['sigmaca'] < 1.0/snrcut].copy()
+
+    # Round datetime
+    cdf2['datetime'] = list(
+        map(lambda x: t0 + datetime.timedelta(seconds=int(dt*x)), cdf2['round_time']))
+
+    if return_type == 'rec':
+        return df_to_rec(cdf2, 'camp')  # Return 'camp' instead of 'cphase'
     elif return_type == 'df':
         return cdf2
 
@@ -817,63 +901,63 @@ def average_bispectra(cdf, dt, return_type='rec', num_samples=int(1e3), snrcut=0
     elif return_type == 'df':
         return cdf2
 
+# * This is completed elsewhere
+# def average_camp(cdf, dt, return_type='rec', err_type='predicted', num_samples=int(1e3)):
+#     # TODO: SNRCUT?
+#     """averages DataFrame of closure amplitudes
 
-def average_camp(cdf, dt, return_type='rec', err_type='predicted', num_samples=int(1e3)):
-    # TODO: SNRCUT?
-    """averages DataFrame of closure amplitudes
+#     Args:
+#         cdf: data frame of closure amplitudes
+#         dt: integration time in seconds
+#         return_type: 'rec' for numpy record array (as used by ehtim), 'df' for data frame
+#         err_type: 'predicted' for modeled error, 'measured' for bootstrap empirical variability estimator
 
-    Args:
-        cdf: data frame of closure amplitudes
-        dt: integration time in seconds
-        return_type: 'rec' for numpy record array (as used by ehtim), 'df' for data frame
-        err_type: 'predicted' for modeled error, 'measured' for bootstrap empirical variability estimator
+#     Returns:
+#         cdf2: averaged closure amplitudes
+#     """
 
-    Returns:
-        cdf2: averaged closure amplitudes
-    """
+#     cdf2 = cdf.copy()
+#     t0 = datetime.datetime(1960, 1, 1)
+#     cdf2['round_time'] = list(map(lambda x: np.round(
+#         (x - t0).total_seconds()/float(dt)), cdf2.datetime))
+#     grouping = ['polarization', 'band', 'quadrangle',
+#                 't1', 't2', 't3', 't4', 'round_time']
+#     # column just for counting the elements
+#     cdf2['number'] = 1
+#     aggregated = {'datetime': np.min, 'time': np.mean,
+#                   'number': lambda x: len(x), 'u1': np.mean, 'u2': np.mean, 'u3': np.mean, 'u4': np.mean, 'v1': np.mean, 'v2': np.mean, 'v3': np.mean, 'v4': np.mean}
 
-    cdf2 = cdf.copy()
-    t0 = datetime.datetime(1960, 1, 1)
-    cdf2['round_time'] = list(map(lambda x: np.round(
-        (x - t0).total_seconds()/float(dt)), cdf2.datetime))
-    grouping = ['polarization', 'band', 'quadrangle',
-                't1', 't2', 't3', 't4', 'round_time']
-    # column just for counting the elements
-    cdf2['number'] = 1
-    aggregated = {'datetime': np.min, 'time': np.mean,
-                  'number': lambda x: len(x), 'u1': np.mean, 'u2': np.mean, 'u3': np.mean, 'u4': np.mean, 'v1': np.mean, 'v2': np.mean, 'v3': np.mean, 'v4': np.mean}
+#     # AVERAGING-------------------------------
+#     if err_type == 'measured':
+#         cdf2['dummy'] = cdf2['camp']
+#         aggregated['dummy'] = lambda x: bootstrap(
+#             x, np.mean, num_samples=num_samples, wrapping_variable=False)
+#     elif err_type == 'predicted':
+#         aggregated['camp'] = np.mean
+#         aggregated['sigmaca'] = lambda x: np.sqrt(np.sum(x**2)/len(x)**2)
+#     else:
+#         print("Error type can only be 'predicted' or 'measured'! Assuming 'predicted'.")
+#         aggregated['camp'] = np.mean
+#         aggregated['sigmaca'] = lambda x: np.sqrt(np.sum(x**2)/len(x)**2)
 
-    # AVERAGING-------------------------------
-    if err_type == 'measured':
-        cdf2['dummy'] = cdf2['camp']
-        aggregated['dummy'] = lambda x: bootstrap(
-            x, np.mean, num_samples=num_samples, wrapping_variable=False)
-    elif err_type == 'predicted':
-        aggregated['camp'] = np.mean
-        aggregated['sigmaca'] = lambda x: np.sqrt(np.sum(x**2)/len(x)**2)
-    else:
-        print("Error type can only be 'predicted' or 'measured'! Assuming 'predicted'.")
-        aggregated['camp'] = np.mean
-        aggregated['sigmaca'] = lambda x: np.sqrt(np.sum(x**2)/len(x)**2)
+#     # ACTUAL AVERAGING
+#     cdf2 = cdf2.groupby(grouping).agg(aggregated).reset_index()
 
-    # ACTUAL AVERAGING
-    cdf2 = cdf2.groupby(grouping).agg(aggregated).reset_index()
+#     if err_type == 'measured':
+#         cdf2['camp'] = [x[0] for x in list(cdf2['dummy'])]
+#         cdf2['sigmaca'] = [0.5*(x[1][1]-x[1][0]) for x in list(cdf2['dummy'])]
 
-    if err_type == 'measured':
-        cdf2['camp'] = [x[0] for x in list(cdf2['dummy'])]
-        cdf2['sigmaca'] = [0.5*(x[1][1]-x[1][0]) for x in list(cdf2['dummy'])]
+#     # round datetime
+#     cdf2['datetime'] = list(
+#         map(lambda x: t0 + datetime.timedelta(seconds=int(dt*x)), cdf2['round_time']))
 
-    # round datetime
-    cdf2['datetime'] = list(
-        map(lambda x: t0 + datetime.timedelta(seconds=int(dt*x)), cdf2['round_time']))
-
-    # ANDREW TODO -- this can lead to big problems!!
-    # drop values averaged from less than 3 datapoints
-    # cdf2.drop(cdf2[cdf2.number < 3.].index, inplace=True)
-    if return_type == 'rec':
-        return df_to_rec(cdf2, 'camp')
-    elif return_type == 'df':
-        return cdf2
+#     # ANDREW TODO -- this can lead to big problems!!
+#     # drop values averaged from less than 3 datapoints
+#     # cdf2.drop(cdf2[cdf2.number < 3.].index, inplace=True)
+#     if return_type == 'rec':
+#         return df_to_rec(cdf2, 'camp')
+#     elif return_type == 'df':
+#         return cdf2
 
 
 def df_to_rec(df, product_type):
