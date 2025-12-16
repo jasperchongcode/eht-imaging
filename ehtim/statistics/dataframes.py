@@ -772,10 +772,10 @@ def average_cphases(cdf, dt, return_type='rec', err_type='predicted', num_sample
 
 
 def average_camp(cdf, dt, return_type='rec', err_type='predicted', num_samples=1000, snrcut=0., scan_avg=False, scan_dt=0.0165):
-    """averages DataFrame of log closure amplitudes
+    """averages DataFrame of closure amplitudes
 
     Args:
-        ldf: data frame of log closure amplitudes (camp)
+        cdf: data frame of closure amplitudes (or logcamp)
         dt: integration time in seconds (ignored when scan_avg is 'True')
         scan_avg (bool): if 'True' averages using scans. 'False' by default
         scan_dt (float): minimal time interval between scans in hours
