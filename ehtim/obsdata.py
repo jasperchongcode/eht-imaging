@@ -1431,12 +1431,13 @@ class Obsdata(object):
 
     def add_cphase(self, avg_time=0, return_type='rec', count='max', snrcut=0.,
                    err_type='predicted', num_samples=1000, round_s=0.1, uv_min=False,
-                   scan_avg=False):
+                   scan_avg=False, scan_dt=0.0165):
         """Adds attribute self.cphase: cphase table averaged for dt
 
            Args:
                avg_time (float): closure phase averaging timescale
                scan_avg (bool): if 'True' averages using scans. 'False' by default
+               scan_dt (float): minimal time interval between scans in hours
                return_type: data frame ('df') or recarray ('rec')
                count (str): If 'min', return minimal set of phases,
                             if 'max' return all closure phases up to reordering
@@ -1458,7 +1459,8 @@ class Obsdata(object):
             cdf = ehdf.make_cphase_df(self, mode='all', round_s=round_s, count=count,
                                       snrcut=0., uv_min=uv_min)
             cdf = ehdf.average_cphases(cdf, avg_time, return_type=return_type, err_type=err_type,
-                                       num_samples=num_samples, snrcut=snrcut, scan_avg=scan_avg)
+                                       num_samples=num_samples, snrcut=snrcut, scan_avg=scan_avg,
+                                       scan_dt=scan_dt)
         else:
             cdf = ehdf.make_cphase_df(self, mode='all', round_s=round_s, count=count,
                                       snrcut=snrcut, uv_min=uv_min)
@@ -1518,12 +1520,14 @@ class Obsdata(object):
 
     def add_camp(self, avg_time=0, return_type='rec', ctype='camp',
                  count='max', debias=True, snrcut=0.,
-                 err_type='predicted', num_samples=1000, round_s=0.1, scan_avg=False):
+                 err_type='predicted', num_samples=1000, round_s=0.1, scan_avg=False,
+                 scan_dt=0.0165):
         """Adds attribute self.camp or self.logcamp: closure amplitudes table
 
            Args:
                avg_time (float): visibility averaging timescale prior to calculating closure amplitude
                scan_avg (bool): if 'True' averages closure amplitudes using scans. 'False' by default
+               scan_dt (float): minimal time interval between scans in hours
                return_type: data frame ('df') or recarray ('rec')
                ctype (str): The closure amplitude type ('camp' or 'logcamp')
                debias (bool): If True, debias the closure amplitude
@@ -1559,7 +1563,8 @@ class Obsdata(object):
         if scan_avg:  # Actual closure averaging
             # todo consider whether to calculate mean differently between logcamp and camp
             cdf = ehdf.average_camp(cdf, avg_time, return_type='df', err_type=err_type,
-                                    num_samples=num_samples, snrcut=snrcut, scan_avg=scan_avg)
+                                    num_samples=num_samples, snrcut=snrcut, scan_avg=scan_avg,
+                                    scan_dt=scan_dt)
 
         if ctype == 'logcamp':
             print("updated self.lcamp: no averaging")
@@ -1582,12 +1587,13 @@ class Obsdata(object):
     def add_logcamp(self, avg_time=0, return_type='rec', ctype='camp',
                     count='max', debias=True, snrcut=0.,
                     err_type='predicted', num_samples=1000, round_s=0.1,
-                    scan_avg=False):
+                    scan_avg=False, scan_dt=0.0165):
         """Adds attribute self.logcamp: closure amplitudes table
 
            Args:
                avg_time (float): closure amplitude averaging timescale
                scan_avg (bool): if 'True' averages using scans. 'False' by default
+               scan_dt (float): minimal time interval between scans in hours
                return_type: data frame ('df') or recarray ('rec')
                ctype (str): The closure amplitude type ('camp' or 'logcamp')
                debias (bool): If True, debias the closure amplitude
@@ -1604,7 +1610,7 @@ class Obsdata(object):
                       count=count, debias=debias, snrcut=snrcut,
                       avg_time=avg_time, err_type=err_type,
                       num_samples=num_samples, round_s=round_s,
-                      scan_avg=scan_avg)
+                      scan_avg=scan_avg, scan_dt=scan_dt)
 
         return
 
