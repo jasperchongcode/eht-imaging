@@ -710,20 +710,15 @@ def average_cphases(cdf, dt, return_type='rec', err_type='predicted', num_sample
         cdf2['round_time'] = list(map(lambda x: np.round(
             (x - t0).total_seconds()/float(dt)), cdf2.datetime))
     else:
-        # set round_time using scans
-        round_time = [-1]*len(cdf2.datetime)
-        scan_id = 0
+        # Optimised version
+        cdf2.sort_values('datetime')
 
-        for i in range(len(cdf2.datetime)-1):
-            round_time[i] = scan_id
-            # if the upcoming gap is bigger than scan_dt
-            if (cdf2.datetime[i+1] - cdf2.datetime[i]) > pd.to_timedelta(scan_dt, unit="h"):
-                scan_id += 1
+        threshold = pd.to_timedelta(scan_dt, unit="h")
 
-        round_time[-1] = scan_id
-        # scanList = [np.asarray([np.min(times_uni[scans==cou] - scan_margin)])]
-
-        cdf2['round_time'] = round_time
+        # 1. Calculate the difference between current and previous row
+        # 2. Check if difference > threshold (Returns a boolean Series)
+        # 3. cumsum() treats True as 1 and False as 0, effectively incrementing the ID
+        cdf2['round_time'] = (cdf2['datetime'].diff() > threshold).cumsum()
 
     grouping = ['polarization', 'band',
                 'triangle', 't1', 't2', 't3', 'round_time']
@@ -797,14 +792,15 @@ def average_camp(cdf, dt, return_type='rec', err_type='predicted', num_samples=1
         cdf2['round_time'] = list(map(lambda x: np.round(
             (x - t0).total_seconds()/float(dt)), cdf2.datetime))
     else:
-        round_time = [-1]*len(cdf2.datetime)
-        scan_id = 0
-        for i in range(len(cdf2.datetime)-1):
-            round_time[i] = scan_id
-            if (cdf2.datetime[i+1] - cdf2.datetime[i]) > pd.to_timedelta(scan_dt, unit="h"):
-                scan_id += 1
-        round_time[-1] = scan_id
-        cdf2['round_time'] = round_time
+        # Optimised version
+        cdf2.sort_values('datetime')
+
+        threshold = pd.to_timedelta(scan_dt, unit="h")
+
+        # 1. Calculate the difference between current and previous row
+        # 2. Check if difference > threshold (Returns a boolean Series)
+        # 3. cumsum() treats True as 1 and False as 0, effectively incrementing the ID
+        cdf2['round_time'] = (cdf2['datetime'].diff() > threshold).cumsum()
 
     # 2. GROUPING
     grouping = ['polarization', 'band', 'quadrangle',
