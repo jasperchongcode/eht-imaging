@@ -753,9 +753,10 @@ def average_cphases(cdf, dt, return_type='rec', err_type='predicted', num_sample
         snrcut = EP
     cdf2 = cdf2[cdf2['sigmacp'] < 180./np.pi/snrcut].copy()  # TODO CHECK
 
-    # round datetime
-    cdf2['datetime'] = list(
-        map(lambda x: t0 + datetime.timedelta(seconds=int(dt*x)), cdf2['round_time']))
+    if not scan_avg:  # only time grid if not using scans
+        # round datetime
+        cdf2['datetime'] = list(
+            map(lambda x: t0 + datetime.timedelta(seconds=int(dt*x)), cdf2['round_time']))
 
     # ANDREW TODO-- this can lead to big problems!!
     # drop values averaged from less than 3 datapoints
@@ -841,9 +842,10 @@ def average_camp(cdf, dt, return_type='rec', err_type='predicted', num_samples=1
         # This assumes sigmaca is in the same units as camp (log-amplitude)
         cdf2 = cdf2[cdf2['sigmaca'] < 1.0/snrcut].copy()
 
-    # Round datetime
-    cdf2['datetime'] = list(
-        map(lambda x: t0 + datetime.timedelta(seconds=int(dt*x)), cdf2['round_time']))
+    if not scan_avg:  # only time grid if not using scans
+        # Round datetime
+        cdf2['datetime'] = list(
+            map(lambda x: t0 + datetime.timedelta(seconds=int(dt*x)), cdf2['round_time']))
 
     if return_type == 'rec':
         return df_to_rec(cdf2, 'camp')  # Return 'camp' instead of 'cphase'
