@@ -761,6 +761,10 @@ def average_cphases(cdf, dt, return_type='rec', err_type='predicted', num_sample
     # ANDREW TODO-- this can lead to big problems!!
     # drop values averaged from less than 3 datapoints
     # cdf2.drop(cdf2[cdf2.number < 3.].index, inplace=True)
+
+    # Ensure the final output is sorted chronologically
+    cdf2 = cdf2.sort_values(['datetime', 'triangle'])
+
     if return_type == 'rec':
         return df_to_rec(cdf2, 'cphase')
     elif return_type == 'df':
@@ -846,6 +850,9 @@ def average_camp(cdf, dt, return_type='rec', err_type='predicted', num_samples=1
         # Round datetime
         cdf2['datetime'] = list(
             map(lambda x: t0 + datetime.timedelta(seconds=int(dt*x)), cdf2['round_time']))
+
+    # Ensure the final output is sorted chronologically
+    cdf2 = cdf2.sort_values(['datetime', 'quadrangle'])
 
     if return_type == 'rec':
         return df_to_rec(cdf2, 'camp')  # Return 'camp' instead of 'cphase'
