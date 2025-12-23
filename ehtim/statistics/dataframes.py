@@ -711,7 +711,7 @@ def average_cphases(cdf, dt, return_type='rec', err_type='predicted', num_sample
             (x - t0).total_seconds()/float(dt)), cdf2.datetime))
     else:
         # Optimised version
-        cdf2.sort_values('datetime')
+        cdf2 = cdf2.sort_values('datetime')
 
         threshold = pd.to_timedelta(scan_dt, unit="h")
 
@@ -794,7 +794,7 @@ def average_camp(cdf, dt, return_type='rec', err_type='predicted', num_samples=1
             (x - t0).total_seconds()/float(dt)), cdf2.datetime))
     else:
         # Optimised version
-        cdf2.sort_values('datetime')
+        cdf2 = cdf2.sort_values('datetime')
 
         threshold = pd.to_timedelta(scan_dt, unit="h")
 
