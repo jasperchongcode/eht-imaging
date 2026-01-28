@@ -1548,7 +1548,7 @@ class Obsdata(object):
             tint0 = 0
 
         # Average visibilities prior to calculating closure values
-        if avg_time > tint0:
+        if avg_time > tint0 and not scan_avg:
             foo = self.copy()
             if scan_avg:
                 foo.add_scans()
