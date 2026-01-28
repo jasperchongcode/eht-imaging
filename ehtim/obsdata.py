@@ -1557,7 +1557,10 @@ class Obsdata(object):
                 avg_time, debias=debias, err_type=err_type)
         else:
             foo = self
-        cdf = ehdf.make_camp_df(foo, ctype=ctype, debias=False,
+
+        should_debias = debias if scan_avg else False
+
+        cdf = ehdf.make_camp_df(foo, ctype=ctype, debias=should_debias,
                                 count=count, round_s=round_s, snrcut=snrcut)
 
         if scan_avg:  # Actual closure averaging
